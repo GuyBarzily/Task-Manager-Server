@@ -1,10 +1,7 @@
-const { PubSub } = require('graphql-subscriptions');
 const Task = require('../models/Task');
 const TaskList = require('../models/TaskList');
 
-// Create a PubSub instance
-const pubsub = new PubSub();
-const TASK_LIST_UPDATED = 'TASK_LIST_UPDATED';
+
 
 const resolvers = {
     Query: {
@@ -39,9 +36,6 @@ const resolvers = {
             taskList.tasks.push(newTask.id);
             await taskList.save();
 
-            // Publish the updated task list to subscribers
-            const updatedTaskList = await TaskList.findById(listId).populate('tasks');
-            pubsub.publish(TASK_LIST_UPDATED, { taskListUpdated: updatedTaskList });
 
             return newTask;
         },
@@ -56,13 +50,6 @@ const resolvers = {
             if (!updatedTask) {
                 throw new Error('Task not found');
             }
-
-            // Find the associated task list and publish the update
-            const taskList = await TaskList.findOne({ tasks: id }).populate('tasks');
-            if (taskList) {
-                pubsub.publish(TASK_LIST_UPDATED, { taskListUpdated: taskList });
-            }
-
             return updatedTask;
         },
 
@@ -78,10 +65,6 @@ const resolvers = {
             if (taskList) {
                 taskList.tasks = taskList.tasks.filter((taskId) => taskId.toString() !== id);
                 await taskList.save();
-
-                // Publish the updated task list to subscribers
-                const updatedTaskList = await TaskList.findById(taskList.id).populate('tasks');
-                pubsub.publish(TASK_LIST_UPDATED, { taskListUpdated: updatedTaskList });
             }
 
             return deletedTask;
@@ -96,19 +79,42 @@ const resolvers = {
             });
 
             await newTaskList.save();
-
-            // Publish the new task list to subscribers
-            pubsub.publish(TASK_LIST_UPDATED, { taskListUpdated: newTaskList });
-
             return newTaskList;
         },
-    },
 
+        updateTaskListVisibility: async (_, { id, visible }) => {
+            // Find the task list by its ID
+            const taskList = await TaskList.findById(id);  // Assuming TaskList is your model
+
+            // If no task list is found, throw an error
+            if (!taskList) {
+                throw new Error('Task List not found');
+            }
+
+            // Update the visibility of the task list
+            taskList.visible = visible;
+
+            // Save the updated task list
+            await taskList.save();
+
+            // Return the updated task list with required fields
+            return {
+                id: taskList.id,
+                title: taskList.title,
+                visible: taskList.visible
+            };
+        },
+
+    },
     Subscription: {
         taskListUpdated: {
-            subscribe: () => pubsub.asyncIterator([TASK_LIST_UPDATED]),
+            subscribe: () => {
+                console.log("Subscription initialized");
+                return pubsub.asyncIterator([TASK_LIST_UPDATED]);
+            },
         },
     },
+
 };
 
 module.exports = resolvers;

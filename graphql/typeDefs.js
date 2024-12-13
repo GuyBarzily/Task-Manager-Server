@@ -13,7 +13,7 @@ const typeDefs = gql`
   type TaskList {
     id: ID!
     title: String!
-    tasks: [Task!]!
+    tasks: [Task]!
     visible: Boolean!
   }
 
@@ -31,13 +31,22 @@ const typeDefs = gql`
       completed: Boolean
       listId: ID!
     ): Task
-    updateTask(id: ID!, completed: Boolean!): Task
-    deleteTask(id: ID!): Task
+    updateTask(
+      id: ID!,
+      title: String,
+      priority: String,
+      deadline: String,
+      description: String,
+      completed: Boolean
+  ): Task
+      deleteTask(id: ID!): Task
     createTaskList(title: String!, taskIds: [ID!], visible: Boolean!): TaskList
+    updateTaskListVisibility(id: ID!, visible: Boolean!): TaskList
+
   }
 
   type Subscription {
-    taskListUpdated: TaskList
+    taskListUpdated: TaskList!
   }
 `;
 

@@ -4,14 +4,18 @@ const { expressMiddleware } = require('@apollo/server/express4');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const { makeExecutableSchema } = require('@graphql-tools/schema');
 const typeDefs = require('./graphql/typeDefs');
 const resolvers = require('./graphql/resolvers');
+const { setupWebSocketServer, broadcastToClients } = require('./websocket');  // Import the WebSocket methods
+
 require('dotenv').config();
 
 async function startServer() {
     const app = express();
+    const schema = makeExecutableSchema({ typeDefs, resolvers });
 
-    // Initialize Apollo Server
+    // Create the Apollo Server with schema and resolvers
     const server = new ApolloServer({
         typeDefs,
         resolvers,
@@ -20,25 +24,27 @@ async function startServer() {
     // Start Apollo Server
     await server.start();
 
-    // Apply middleware for GraphQL endpoint
+    // Apply middleware for GraphQL endpoint (queries and mutations)
     app.use(
-        '/graphql',               // The GraphQL endpoint
-        cors(),                   // Cross-origin resource sharing middleware
-        bodyParser.json(),        // Body parser to handle JSON requests
-        expressMiddleware(server) // Connect Apollo Server with Express
+        '/graphql',               // GraphQL endpoint for queries and mutations
+        cors(),
+        bodyParser.json(),
+        expressMiddleware(server)
     );
 
-    // MongoDB connection using environment variable URI
+    // MongoDB connection
     mongoose.connect(process.env.MONGODB_URI)
         .then(() => console.log('MongoDB connected'))
         .catch((err) => console.log('MongoDB connection error:', err));
 
-    // Start the Express server
-    const PORT = process.env.PORT || 4000; // Use port from .env or default to 4000
-    app.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}/graphql`);
+    const httpServer = app.listen(4000, () => {
+        console.log('Server is running on http://localhost:4000/graphql');
     });
+
+    // Set up the WebSocket server for handling subscriptions
+    //setupWebSocketServer(httpServer);  // Initialize WebSocket server
 }
 
-// Run the server
+// Start the server
 startServer();
+
