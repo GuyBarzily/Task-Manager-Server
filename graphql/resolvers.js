@@ -40,18 +40,30 @@ const resolvers = {
             return newTask;
         },
 
-        updateTask: async (_, { id, completed }) => {
+        updateTask: async (_, { id, title, priority, deadline, description, completed }) => {
+            // Build the update object
+            const updateFields = {
+                ...(title !== undefined && { title }),
+                ...(priority !== undefined && { priority }),
+                ...(deadline !== undefined && { deadline }),
+                ...(description !== undefined && { description }),
+                ...(completed !== undefined && { completed }),
+            };
+
             // Find and update the task
             const updatedTask = await Task.findByIdAndUpdate(
                 id,
-                { completed },
+                updateFields,
                 { new: true }
             );
+
             if (!updatedTask) {
                 throw new Error('Task not found');
             }
+
             return updatedTask;
         },
+
 
         deleteTask: async (_, { id }) => {
             // Find and delete the task
